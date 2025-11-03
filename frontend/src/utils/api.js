@@ -1,9 +1,10 @@
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5000/api';
+const HOST_BASE_URL = 'https://campus-connect-one-green.vercel.app/api'
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: HOST_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
