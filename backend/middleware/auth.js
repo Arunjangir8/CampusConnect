@@ -10,7 +10,10 @@ const authenticate = async (req, res, next) => {
     }
 
     const decoded = verifyToken(token);
-    const user = await User.findById(decoded.userId).select('-password');
+    const user = await User.findById(decoded.userId);
+    if (user) {
+      delete user.password;
+    }
     
     if (!user) {
       return res.status(401).json({ message: 'Invalid token.' });

@@ -1,55 +1,46 @@
-const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { prisma } = require('../config/database');
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6
-  },
-  role: {
-    type: String,
-    enum: ['student', 'alumni', 'admin'],
-    default: 'student'
-  },
-  department: {
-    type: String,
-    required: true
-  },
-  year: {
-    type: Number,
-    required: function() { return this.role === 'student'; }
-  },
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  verificationToken: String,
-  resetPasswordToken: String,
-  resetPasswordExpire: Date
-}, {
-  timestamps: true
-});
+class User {
+  static async create(userData) {
+    const hashedPassword = await bcrypt.hash(userData.password, 12);
+    return await prisma.user.create({
+      data: {
+        ...userData,
+        password: hashedPassword,
+        role: userData.role.toUpperCase()
+      }
+    });
+  }
 
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
-});
+  static async findByEmail(email) {
+    return await prisma.user.findUnique({
+      where: { email }
+    });
+  }
 
-userSchema.methods.comparePassword = async function(password) {
-  return await bcrypt.compare(password, this.password);
-};
+  static async findById(id) {
+    return await prisma.user.findUnique({
+      where: { id }
+    });
+  }
 
-module.exports = mongoose.model('User', userSchema);
+  static async findByVerificationToken(token) {
+    return await prisma.user.findFirst({
+      where: { verificationToken: token }
+    });
+  }
+
+  static async updateById(id, data) {
+    return await prisma.user.update({
+      where: { id },
+      data
+    });
+  }
+
+  static async comparePassword(plainPassword, hashedPassword) {
+    return await bcrypt.compare(plainPassword, hashedPassword);
+  }
+}
+
+module.exports = User;

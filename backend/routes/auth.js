@@ -23,29 +23,27 @@ router.post('/signup', [
 
     const { name, email, password, role, department, year } = req.body;
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findByEmail(email);
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
     const verificationToken = generateVerificationToken();
     
-    const user = new User({
+    const user = await User.create({
       name,
       email,
       password,
       role,
       department,
-      year: role === 'student' ? year : undefined,
+      year: role === 'student' ? parseInt(year) : null,
       verificationToken
     });
-
-    await user.save();
     await sendVerificationEmail(email, verificationToken);
 
     res.status(201).json({
       message: 'User registered successfully. Please check your email for verification.',
-      userId: user._id
+      userId: user.id
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -65,12 +63,12 @@ router.post('/login', [
 
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findByEmail(email);
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await User.comparePassword(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -79,12 +77,12 @@ router.post('/login', [
       return res.status(400).json({ message: 'Please verify your email before logging in' });
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user.id);
 
     res.json({
       token,
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -101,18 +99,23 @@ router.post('/login', [
 router.get('/verify-email/:token', async (req, res) => {
   try {
     const { token } = req.params;
+    console.log('Verification token received:', token);
 
-    const user = await User.findOne({ verificationToken: token });
+    const user = await User.findByVerificationToken(token);
+    console.log('User found:', user ? 'Yes' : 'No');
+    
     if (!user) {
       return res.status(400).json({ message: 'Invalid or expired verification token' });
     }
 
-    user.isVerified = true;
-    user.verificationToken = undefined;
-    await user.save();
+    await User.updateById(user.id, {
+      isVerified: true,
+      verificationToken: null
+    });
 
     res.json({ message: 'Email verified successfully' });
   } catch (error) {
+    console.error('Verification error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -121,7 +124,7 @@ router.get('/verify-email/:token', async (req, res) => {
 router.get('/me', authenticate, async (req, res) => {
   res.json({
     user: {
-      id: req.user._id,
+      id: req.user.id,
       name: req.user.name,
       email: req.user.email,
       role: req.user.role,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { authAPI } from '../utils/api';
 
@@ -6,9 +6,13 @@ const VerifyEmail = () => {
   const { token } = useParams();
   const [status, setStatus] = useState('verifying');
   const [message, setMessage] = useState('');
+  const hasVerified = useRef(false);
 
   useEffect(() => {
     const verifyEmail = async () => {
+      if (hasVerified.current) return;
+      hasVerified.current = true;
+      
       try {
         const response = await authAPI.verifyEmail(token);
         setStatus('success');
