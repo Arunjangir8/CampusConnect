@@ -15,6 +15,8 @@ model User {
   role              Role      @default(STUDENT)
   department        String
   year              Int?
+  bio               String?
+  skills            String[]
   isVerified        Boolean   @default(false)
   verificationToken String?
   resetPasswordToken String?
@@ -22,11 +24,159 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  events            Event[]
+  resources         Resource[]
+  projects          Project[]
+  mentorshipRequests MentorshipRequest[]
+  discussions       Discussion[]
+  comments          Comment[]
+  eventRSVPs        EventRSVP[]
+  projectMembers    ProjectMember[]
+
   @@map("users")
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  category    EventCategory
+  date        DateTime
+  location    String
+  maxAttendees Int?
+  imageUrl    String?
+  createdById String
+  createdBy   User        @relation(fields: [createdById], references: [id])
+  rsvps       EventRSVP[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("events")
+}
+
+model EventRSVP {
+  id      String @id @default(cuid())
+  userId  String
+  eventId String
+  user    User   @relation(fields: [userId], references: [id])
+  event   Event  @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventId])
+  @@map("event_rsvps")
+}
+
+model Resource {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  subject     String
+  fileUrl     String
+  fileType    String
+  uploadedById String
+  uploadedBy  User     @relation(fields: [uploadedById], references: [id])
+  downloads   Int      @default(0)
+  rating      Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("resources")
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  title       String
+  description String
+  skills      String[]
+  status      ProjectStatus   @default(OPEN)
+  createdById String
+  createdBy   User            @relation(fields: [createdById], references: [id])
+  members     ProjectMember[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String @id @default(cuid())
+  userId    String
+  projectId String
+  role      String @default("member")
+  user      User   @relation(fields: [userId], references: [id])
+  project   Project @relation(fields: [projectId], references: [id])
+  joinedAt  DateTime @default(now())
+
+  @@unique([userId, projectId])
+  @@map("project_members")
+}
+
+model MentorshipRequest {
+  id          String            @id @default(cuid())
+  title       String
+  description String
+  status      MentorshipStatus  @default(PENDING)
+  studentId   String
+  mentorId    String?
+  student     User              @relation(fields: [studentId], references: [id])
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("mentorship_requests")
+}
+
+model Discussion {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  department  String
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id])
+  comments    Comment[]
+  upvotes     Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("discussions")
+}
+
+model Comment {
+  id           String     @id @default(cuid())
+  content      String
+  authorId     String
+  discussionId String
+  author       User       @relation(fields: [authorId], references: [id])
+  discussion   Discussion @relation(fields: [discussionId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("comments")
 }
 
 enum Role {
   STUDENT
   ALUMNI
   ADMIN
+}
+
+enum EventCategory {
+  TECHNICAL
+  CULTURAL
+  SPORTS
+  ACADEMIC
+  OTHER
+}
+
+enum ProjectStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MentorshipStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  DECLINED
 }

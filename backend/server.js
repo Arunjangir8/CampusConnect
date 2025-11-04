@@ -16,6 +16,11 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/events', require('./routes/events'));
+app.use('/api/resources', require('./routes/resources'));
+app.use('/api/projects', require('./routes/projects'));
+app.use('/api/mentorship', require('./routes/mentorship'));
+app.use('/api/discussions', require('./routes/discussions'));
 
 // Health check
 app.get('/api/health', (req, res) => {
